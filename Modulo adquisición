@@ -1,0 +1,73 @@
+import nltk
+import random
+import sqlite3
+from nltk.chat.util import Chat, reflections
+
+# Descargar el conjunto de datos necesario para NLTK (si no está descargado)
+nltk.download('punkt')
+
+# Conexión a la base de datos SQLite (o crea una nueva si no existe)
+conn = sqlite3.connect("preguntas.db")
+cursor = conn.cursor()
+
+# Crear la tabla de preguntas si no existe
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS preguntas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pregunta TEXT
+    )
+""")
+conn.commit()
+
+# Función para agregar una pregunta a la base de datos
+def agregar_pregunta(pregunta):
+    cursor.execute("INSERT INTO preguntas (pregunta) VALUES (?)", (pregunta,))
+    conn.commit()
+
+# Definir las reglas del chatbot
+pares = [
+    [
+        r"mi nombre es (.*)",
+        ["Hola %1, ¿cómo puedo ayudarte hoy?",]
+    ],
+    [
+        r"¿cuál es tu nombre?",
+        ["Soy un chatbot. Puedes llamarme ChatGPT.",]
+    ],
+    [
+        r"¿cómo estás?",
+        ["Estoy bien, gracias. ¿Y tú?",]
+    ],
+    [
+        r"((?:por favor|por favor)? ayuda (yo)?|¿qué puedes hacer por mí\?)",
+        ["Puedo responder preguntas generales. Inténtalo.",]
+    ],
+    [
+        r"adiós",
+        ["¡Adiós! Espero haberte ayudado.",]
+    ],
+    [
+        r"(.*)",
+        ["Lo siento, no entiendo tu pregunta. ¿Puedes ser más específico?",]
+    ]
+]
+
+# Iniciar el chatbot
+def chatbot():
+    print("Hola, soy un chatbot. ¿En qué puedo ayudarte hoy?")
+    chat = Chat(pares, reflections)
+    while True:
+        user_input = input("Tú: ")
+        if user_input.lower() == "adiós":
+            print("Chatbot: ¡Adiós! Espero haberte ayudado.")
+            break
+        else:
+            agregar_pregunta(user_input)  # Agregar la pregunta a la base de datos
+            response = chat.respond(user_input)
+            print("Chatbot:", response)
+
+if __name__ == "__main__":
+    chatbot()
+
+# Cerrar la conexión a la base de datos al final del programa
+conn.close()
